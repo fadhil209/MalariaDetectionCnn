@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import cv2
 import os
 
@@ -8,7 +7,7 @@ import keras
 from keras.preprocessing.image import img_to_array
 from keras.layers import Dense, Conv2D
 from keras.layers import Flatten
-from keras.layers import MaxPooling2D, GlobalAveragePooling2D
+from keras.layers import MaxPooling2D
 from keras.layers import Activation
 from keras.layers import BatchNormalization
 from keras.layers import Dropout
@@ -16,72 +15,31 @@ from keras.models import Sequential
 from keras import backend as K
 from keras import optimizers
 from keras.utils import np_utils as keras_utils
-
-print(os.listdir("cell_images"))
-print("\n")
+import time
 
 
-parasitized_data = os.listdir("cell_images/Parasitized")
-print(parasitized_data[:10])
-print("\n")
+"""
+divides the images into Train and Test parts when 1 is given as testPart there
+the 1st quarter of the images will be Test and the rest will be trained and the
+same if 2 is given as testPart then the 2nd Quarter of the images will be Test
+data and the rest as Train data
 
-uninfected_data = os.listdir("cell_images/Uninfected")
-print(uninfected_data[:10])
+keyword arguments:
+parasitizedData -- array or list of infected images
+uninfectedData -- array or list of uninfected images
 
+testPart -- int number of which quarter of image data to be Test data
 
-# Data Visuallization
-
-# Infected Data
-plt.figure(figsize=(12, 12))
-for i in range(4):
-    plt.subplot(1, 4, i + 1)
-    img = cv2.imread("cell_images/Parasitized/" + parasitized_data[i])
-    plt.imshow(img)
-    plt.title("PARASITIZED : 1")
-    plt.tight_layout()
-plt.show()
-
-# Uninfected Data
-plt.figure(figsize=(12, 12))
-for i in range(4):
-    plt.subplot(1, 4, i + 1)
-    img = cv2.imread("cell_images/Uninfected/" + uninfected_data[i])
-    plt.imshow(img)
-    plt.title("UNINFECTED : 0")
-    plt.tight_layout()
-plt.show()
-
-data_train = []
-labels_train = []
-data_test = []
-labels_test = []
-
-# # append all the images in one data variable and append the respective labels in labels variable
-# for img in parasitized_data:
-#     try:
-#         img_read = plt.imread("cell_images/Parasitized/" + img)
-#         img_resize = cv2.resize(img_read, (50, 50))
-#         img_array = img_to_array(img_resize)
-#         data.append(img_array)
-#         labels.append(1)
-#     except:
-#         None
-# for img in uninfected_data:
-#     try:
-#         img_read = plt.imread("cell_images/Uninfected/" + img)
-#         img_resize = cv2.resize(img_read, (50, 50))
-#         img_array = img_to_array(img_resize)
-#         data.append(img_array)
-#         labels.append(0)
-#     except:
-#         None
-
-# plt.imshow(data[15000])
-# plt.title(labels[15000])
-# plt.show()
+This function is there because as discussed with professor we shall have the train
+data the first time the last 3 quarters of images data and the second time it will
+be the 2nd quarter will be left as Test and the 1st, 3rd and 4th quarters are left
+for training and with this function we can divide according to what needs to be
+Test data and what needs to be Train Data
+"""
 
 
 def trainAndTest(parasitizedData, uninfectedData, testPart):
+
     testData = []
     testLabel = []
     trainData = []
@@ -122,23 +80,15 @@ def trainAndTest(parasitizedData, uninfectedData, testPart):
     return trainData, trainLabel, testData, testLabel
 
 
-# print(data_train[4])
+"""
+Build a CNN model that can be used in the main program to train, test and predict also
 
-# for i in range(4):
-#     plt.subplot(1, 4, i + 1)
-#     # img = cv2.imread(data_train[i])
-#     plt.imshow(data_train[i])
-#     plt.title("label : " + str(labels_train[i]))
-#     plt.tight_layout()
-# plt.show()
-
-# print("train Data: " + str(len(data_train)) + "," + str(len(labels_train)))
-# print("test Data: " + str(len(data_test)) + "," + str(len(labels_test)))
-# print("total data" + str(len(parasitized_data) + len(uninfected_data)))
-# print("Total data to work with" + str(len(data_train) + len(data_test)))
-
-# print(f'SHAPE OF TRAINING IMAGE DATA : {np.shape(data_train)}')
-# print(f'SHAPE OF TESTING IMAGE DATA : {np.shape(data_test)}')
+Keyword arguments:
+height -- the height of the images
+width -- the width of the images
+classes -- the number of different classes
+channels -- the number of channels which can be known from numpy array .shape() method
+"""
 
 
 def CNN(height, width, classes, channels):
@@ -171,29 +121,59 @@ def CNN(height, width, classes, channels):
     return model
 
 
-model = CNN(50, 50, 2, 3)
-model.summary()
+"""
+Main Program
+"""
 
-model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-data_train, labels_train, data_test, labels_test = trainAndTest(parasitized_data, uninfected_data, 1)
-print(labels_test[0])
-labels_train = keras_utils.to_categorical(labels_train, num_classes=2)
-labels_test = keras_utils.to_categorical(labels_test, num_classes=2)
+def main():
+    parasitized_data = os.listdir("cell_images/Parasitized")
+    uninfected_data = os.listdir("cell_images/Uninfected")
 
-print(f'SHAPE OF TRAINING IMAGE DATA : {np.array(data_train).shape}')
-print(f'SHAPE OF TRAINING LABELS : {np.array(labels_train).shape}')
+    for i in range(4):
+        data_train = []
+        data_test = []
+        labels_train = []
+        labels_test = []
 
-model.fit(np.array(data_train), np.array(labels_train), epochs=1, batch_size=32)
+        print('Dividing Data into Train and Test sets')
+        data_train, labels_train, data_test, labels_test = trainAndTest(parasitized_data, uninfected_data, i + 1)
+        print('Done dividing will start training now')
+        model = CNN(50, 50, 2, 3)
+        model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-# print(model.predict(np.array(data_test[:4])))
-# # model.predict(np.array(data_test[:1]))
-# print(labels_test[0])
-# print(labels_test[1])
-# print(labels_test[2])
-# print(labels_test[3])
+        labels_train = keras_utils.to_categorical(labels_train, num_classes=2)
+        labels_test = keras_utils.to_categorical(labels_test, num_classes=2)
 
-predictions = model.evaluate(np.array(data_test), labels_test)
+        model.fit(np.array(data_train), np.array(labels_train), epochs=3, batch_size=32)
+        print('finished training')
 
-print(f'LOSS : {predictions[0]}')
-print(f'ACCUACY : {predictions[1]}')
+        prediction = model.predict(np.array(data_test[:4]))
+        plt.figure(figsize=(10, 10))
+        for j in range(4):
+            plt.subplot(1, 4, j + 1)
+            plt.imshow(data_test[j])
+            if(prediction[j][0] > prediction[j][1]):
+                predicted = 'Uninfected'
+            else:
+                predicted = 'Parasitized'
+            if(labels_test[j][0] > labels_test[j][1]):
+                actual = 'Uninfected'
+            else:
+                actual = 'Parasitized'
+            title = 'actual : ' + actual + '\npredicted : ' + predicted
+            plt.title(title)
+            plt.tight_layout()
+        plt.show()
+
+        predictions = model.evaluate(np.array(data_test), labels_test)
+
+        print(f'with {i + 1} quarter of images as Test Data')
+        print(f'LOSS : {predictions[0]}')
+        print(f'ACCURACY : {predictions[1]}')
+        time.sleep(5)
+
+
+
+# Running the main program only
+main()
